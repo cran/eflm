@@ -2,97 +2,131 @@
 % Please edit documentation in R/eglm.R
 \name{eglm}
 \alias{eglm}
-\title{Fitting Generalized Linear Models}
+\title{Efficient Fitting of Generalized Linear Models}
 \usage{
 eglm(
   formula,
+  family = gaussian,
   data,
-  family = gaussian(),
-  intercept = TRUE,
-  weights = NULL,
-  na.action = na.omit,
+  weights,
+  subset,
+  na.action,
   start = NULL,
-  etastart = NULL,
-  mustart = NULL,
-  offset = NULL,
-  maxit = 25,
-  k = 2,
+  etastart,
+  mustart,
+  offset,
+  control = list(...),
   model = TRUE,
-  singularity.method = c("eigen", "Cholesky", "qr"),
+  method = "eglm.wfit",
   x = FALSE,
   y = TRUE,
-  tol.estimation = 1e-08,
-  tol.solve = .Machine$double.eps,
-  tol.values = 1e-07,
-  tol.vectors = 1e-07,
+  singular.ok = TRUE,
+  contrasts = NULL,
+  reduce = FALSE,
   ...
 )
 }
 \arguments{
-\item{formula}{A formula for the model}
+\item{formula}{an object of class \code{"\link{formula}"} (or one that can be
+coerced to that class): a symbolic description of the model to be fitted.
+The details of model specification are given under \sQuote{Details}.}
 
-\item{data}{A tibble or data.frame}
+\item{family}{a description of the error distribution and link function to be
+used in the model. This can be a character string naming a
+family function, a family function or the result of a call to a family
+function. See \code{\link{family}} for details of family functions.}
 
-\item{family}{See the function \link{glm}, but here it must be specified with brackets (e.g. \code{quasipoisson()})}
+\item{data}{an optional data frame, list or environment (or object coercible
+by \code{\link{as.data.frame}} to a data frame) containing the variables in
+the model. If not found in \code{data}, the variables are taken from
+\code{environment(formula)}, typically the environment from which \code{lm}
+is called.}
 
-\item{intercept}{Logical value to determine wheareas to included an intercept in the null model (Defaults to \code{TRUE})}
+\item{weights}{an optional vector of weights to be used in the fitting
+process. Should be \code{NULL} or a numeric vector. If non-NULL, weighted
+least squares is used with weights \code{weights} (that is, minimizing
+\code{sum(w*e^2)}); otherwise ordinary least squares is used.}
 
-\item{weights}{An optional vector of ‘prior weights’ to be used in the fitting process. Should be \code{NULL}
-or a numeric vector (e.g. \code{data$weights}, defaults to \code{NULL})}
+\item{subset}{an optional vector specifying a subset of observations to be
+used in the fitting process.}
 
 \item{na.action}{a function which indicates what should happen when the data
-contain NAs. The default is set by the \code{na.action} setting of options,
-and is \link{na.fail} if that is unset. The ‘factory-fresh’ default is
-\code{na.omit}. Another possible value is NULL, no action. Value
-\code{na.exclude} can be useful.}
+contain \code{NA}s. The default is set by the \code{na.action} setting of
+\code{\link{options}}, and is \code{\link{na.fail}} if that is unset. The
+\sQuote{factory-fresh} default is \code{\link{na.omit}}. Another possible
+value is \code{NULL}, no action. Value \code{\link{na.exclude}} can be
+useful.}
 
-\item{start}{Starting values for the parameters in the linear predictor}
+\item{start}{starting values for the parameters in the linear predictor.}
 
-\item{etastart}{Starting values for the linear predictor}
+\item{etastart}{starting values for the linear predictor.}
 
-\item{mustart}{Starting values for the vector of means}
+\item{mustart}{starting values for the vector of means.}
 
-\item{offset}{This can be used to specify an a priori known component to be included in the
-linear predictor during fitting. This should be \code{NULL} or a numeric vector of length
-equal to the number of cases. One or more offset terms can be included in the formula instead
-or as well, and if more than one is specified their sum is used. See \code{stats::model.offset()}}
+\item{offset}{this can be used to specify an \emph{a priori} known component
+to be included in the linear predictor during fitting. This should be
+\code{NULL} or a numeric vector or matrix of extents matching those of the
+response. One or more \code{\link{offset}} terms can be included in the
+formula instead or as well, and if more than one are specified their sum is
+used. See \code{\link{model.offset}}.}
 
-\item{maxit}{See the function \link{glm}}
+\item{control}{a list of parameters for controlling the fitting process. For
+\code{eglm.wfit} this is passed to \code{glm.control}.}
 
-\item{k}{The penalty per parameter to be used, the default \code{k = 2}
-is the classical AIC}
+\item{model}{a logical value indicating whether \emph{model frame} should be
+included as a component of the returned value.}
 
-\item{model}{A logical value indicating whether model frame should be included as a
-component of the returned value (Defaults to \code{TRUE})}
+\item{method}{the method to be used in fitting the model. The default method
+\code{"eglm.wfit"} uses iteratively reweighted least squares (IWLS): the
+alternative \code{"model.frame"} returns the model frame and does no
+fitting. User-supplied fitting functions can be supplied either as a
+function or a character string naming a function, with a function which
+takes the same arguments as \code{glm.fit} from the \bold{stats} package.
+If specified as a character string it is looked up from within the
+\bold{eflm} namespace.}
 
-\item{singularity.method}{The chosen method to detect for singularity. Defaults to \code{"eigen"} but
-it can also be \code{"Cholesky"} or \code{"qr"}}
+\item{x, y}{logical values indicating whether the
+\emph{model matrix} (\code{x}) and the \emph{response vector} (\code{y})
+used in the fitting process should be returned as components of the returned
+value.}
 
-\item{x}{Logical value indicating whether the model matrix used in the fitting process
-should be returned as components of the returned value (Defaults to \code{FALSE}, see the function \link{glm.fit})}
+\item{singular.ok}{logical; if FALSE a singular fit is an error.}
 
-\item{y}{Logical value indicating whether the response vector used in the fitting process
-should be returned as components of the returned value (Defaults to \code{FALSE}, see the function \link{glm.fit})}
+\item{contrasts}{an optional list. See the \code{contrasts.arg} of
+\code{model.matrix.default}.}
 
-\item{tol.estimation}{Tolerance to be used for the estimation (Defaults to 1e-8)}
+\item{reduce}{logical; if TRUE an alternate design matrix of \code{p * p} is
+used for the fitting instead of the traditional \code{n * p} design matrix.}
 
-\item{tol.solve}{(Defaults to \code{.Machine$double.eps}, see the function \link{solve})}
-
-\item{tol.values}{Tolerance to consider eigenvalues equal to zero (Defaults to 1e-7, see the function \link{control}),}
-
-\item{tol.vectors}{Tolerance to consider eigenvectors equal to zero (Defaults to 1e-7, see the function \link{control})}
-
-\item{\dots}{For eglm: arguments to be used to form the default control argument if it is not supplied directly. For weights: further arguments passed to or from other methods.}
+\item{\dots}{For eglm: arguments to be used to form the default control
+argument if it is not supplied directly. For weights: further arguments
+passed to or from other methods.}
 }
 \value{
-An object of class "eglm" that behaves the same way as the "glm" class, see the function \link{glm}.
+An object of class "eglm" that behaves the same way as the "glm"
+class, see the function \code{"\link{glm}"}. This output also includes the
+logical "reduce" and, depending on it, the reduced design matrix "xtx"
+when the reduce argument is set to TRUE.
 }
 \description{
-eglm is used to fit generalized linear models in an equivalent way to
-\code{glm} but in a reduced time depending on the design matrix (see the
-DESCRIPTION).
+Efficient Generalized Linear Model (\code{"eglm"}) is used to fit generalized
+linear models in an equivalent way to \code{"\link{glm}"} but in a reduced
+time depending on the design matrix and the family (or link).
+}
+\details{
+Models for \code{eglm} are specified symbolically.
+A typical model has the form \code{response ~ terms} where \code{response}
+is the (numeric) response vector and \code{terms} is a series of terms which
+specifies a linear predictor for \code{response}. A terms specification of
+the form \code{first + second} indicates all the terms in \code{first}
+together with all the terms in \code{second} with duplicates removed. A
+specification of the form \code{first:second} indicates the set of
+terms obtained by taking the interactions of all terms in \code{first}
+with all terms in \code{second}. The specification \code{first*second}
+indicates the \emph{cross} of \code{first} and \code{second}. This is
+the same as \code{first + second + first:second}, and exactly the same as
+\code{"\link{glm}"} from the \link{stats} package.
 }
 \examples{
-# Generalized linear model with Gaussian link
-eglm(mpg ~ wt, family = gaussian(), data = mtcars)
+eglm(mpg ~ wt, family = gaussian, data = mtcars)
 }
